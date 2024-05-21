@@ -1,0 +1,38 @@
+{
+    "name": "tasmidur/laravel-graphql-schema",
+    "description": "laravel-graphql-schema",
+    "type": "library",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Tasmidur\\LaravelGraphqlSchema\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Tasmidur\\LaravelGraphqlSchema\\LaravelGraphqlSchemaServiceProvider"
+            ]
+        }
+    },
+    "authors": [
+        {
+            "name": "tasmidur21",
+            "email": "tasmidur.rahman@byslglobal.com"
+        }
+    ],
+    "require": {
+        "php": "^7.3|^8.0|8.1|8.2|8.3",
+        "illuminate/support": "^8.0|^9.0|^10.0|^11.0",
+        "brick/varexporter": "^0.5.0",
+        "doctrine/dbal": "^3.6 || ^4.0",
+        "illuminate/contracts": "^8.0|^9.0|^10.0|^11.0",
+        "illuminate/database": "^8.0|^9.0|^10.0|^11.0",
+        "illuminate/testing": "^8.0|^9.0|^10.0|^11.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^6.0|^7.0|^8.0|^9.0"
+    }
+}
