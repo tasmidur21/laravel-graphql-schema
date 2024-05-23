@@ -9,6 +9,7 @@ use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Pluralizer;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Command\Command as CommandAlias;
 use Tasmidur\LaravelGraphqlSchema\Contracts\SchemaRulesResolverInterface;
@@ -53,7 +54,7 @@ class GenerateSchemaCommand extends Command
         ])->generate();
 
         if ($create) {
-            $this->createRequest($table,json_decode(json_encode($this->parsedToGraphQLType($table, $rules)),true), $force, $file);
+            $this->createRequest($table, json_decode(json_encode($this->parsedToGraphQLType($table, $rules)), true), $force, $file);
         } else {
             $this->createOutput($table, $rules);
         }
@@ -106,13 +107,35 @@ class GenerateSchemaCommand extends Command
             $this->info("GraphQL Schema type for table \"$table\" have been generated!");
             $this->info('Copy & paste these where ever your graphql type takes place:');
         }
-        $this->line($this->format($this->parsedToGraphQLType($table, $rules)));
+        //$this->line($this->format($this->parsedToGraphQLType($table, $rules)));
+        $types = $this->parsedToGraphQLType($table, $rules);
+        $contents = $this->getStubContents([
+            "MODEL" => $this->getSingularClassName($table),
+            "FIELDS" =>  str_replace(['"#', '#"'], ['', ''],json_encode($types['fields'], JSON_PRETTY_PRINT))
+        ]);
+        $this->line($this->format($contents));
+    }
+    public function getSingularClassName($name)
+    {
+        return ucwords(Pluralizer::singular($name));
+    }
+
+    public function getStubContents($stubVariables = [])
+    {
+        $contents = file_get_contents(__DIR__ . "/../../stubs/type.stubs");
+
+        foreach ($stubVariables as $search => $replace) {
+            $contents = str_replace('$' . $search . '$', $replace, $contents);
+        }
+
+        return $contents;
+
     }
 
     private function parsedToGraphQLType(string $table, array $rules): array
     {
         $definition = [];
-        $definition["validation_rules"]=$rules;
+        $definition["validation_rules"] = $rules;
         foreach ($rules as $key => $rule) {
             $isRequired = $rule[0] === 'required';
             $attributeType = $rule[1] ?? null;
@@ -181,6 +204,7 @@ class GenerateSchemaCommand extends Command
             default => $isRequired ? "#Type::nonNull(Type::string())#" : "#Type::string()#"
         };
     }
+
     private function extractContentFromHashes($input): ?string
     {
         // Use a regular expression to extract the string between the hash symbols
