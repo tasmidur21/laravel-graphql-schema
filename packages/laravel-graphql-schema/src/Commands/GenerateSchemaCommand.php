@@ -111,7 +111,7 @@ class GenerateSchemaCommand extends Command
         $types = $this->parsedToGraphQLType($table, $rules);
         $contents = $this->getStubContents([
             "MODEL" => $this->getSingularClassName($table),
-            "FIELDS" =>  str_replace(['"#', '#"'], ['', ''],json_encode($types['fields'], JSON_PRETTY_PRINT))
+            "FIELDS" =>  str_replace(['"#', '#"','{', '}',':'], ['', '','[', ']','=>'],json_encode($types['fields'], JSON_PRETTY_PRINT))
         ]);
         $this->line($this->format($contents));
     }

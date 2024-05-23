@@ -7,9 +7,9 @@ use GraphQL\Type\Definition\Type;
 class $MODEL$Type extends GraphQLType
 {
     protected $attributes = [
-        'name'          => '$MODEL_NAME$',
-        'description'   => 'The $MODEL_NAME$ Type',
-        'model'         => $MODEL$::class,
+        "name"          => "$MODEL$",
+        "description"   => "The $MODEL$ Type",
+        "model"         => $MODEL$::class,
     ];
     public function fields(): array
     {
