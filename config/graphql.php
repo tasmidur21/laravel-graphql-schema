@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types = 1);
+declare(strict_types=1);
 
 return [
     'route' => [
@@ -75,14 +75,16 @@ return [
     'schemas' => [
         'default' => [
             'query' => [
-               \App\GraphQL\Queries\PostQuery::class,
-               \App\GraphQL\Queries\CommentQuery::class
+                \App\GraphQL\Queries\UserQuery::class,
+                \App\GraphQL\Queries\PostQuery::class,
+                \App\GraphQL\Queries\CommentQuery::class
             ],
             'mutation' => [
                 // ExampleMutation::class,
             ],
             // The types only available in this schema
             'types' => [
+                \App\GraphQL\Types\UserType::class,
                 \App\GraphQL\Types\PostType::class,
                 \App\GraphQL\Types\CommentType::class
             ],

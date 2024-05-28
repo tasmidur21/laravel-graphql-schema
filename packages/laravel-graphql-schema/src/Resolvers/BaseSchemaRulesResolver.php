@@ -39,9 +39,9 @@ abstract class BaseSchemaRulesResolver implements SchemaRulesResolverInterface
             }
 
             // We do not need a rule for auto increments
-            if ($this->isAutoIncrement($column)) {
-                continue;
-            }
+//            if ($this->isAutoIncrement($column)) {
+//                continue;
+//            }
 
             $tableRules[$field] = $this->generateColumnRules($column);
         }

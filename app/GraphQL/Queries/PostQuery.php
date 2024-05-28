@@ -7,6 +7,7 @@ use Closure;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Rebing\GraphQL\Support\Facades\GraphQL;
 use Rebing\GraphQL\Support\Query;
@@ -65,10 +66,9 @@ class PostQuery extends Query
         ];
     }
 
-    public function resolve($root, array $args, $context, ResolveInfo $resolveInfo, Closure $getSelectFields): Collection|array
+    public function resolve($root, array $args, $context, ResolveInfo $resolveInfo, Closure $getSelectFields)
     {
         $fields = $getSelectFields();
-
         $whereConditions = [];
         foreach ($args as $key => $value) {
             if (Schema::hasColumn('posts', $key)) {
@@ -78,11 +78,9 @@ class PostQuery extends Query
             }
         }
         $query = Post::query();
+        $query->select();
         if (!empty($whereConditions)) {
             $query->where($whereConditions);
-        }
-        if ($fields->getRelations()) {
-            $query->with($fields->getRelations());
         }
         return $query->get();
     }

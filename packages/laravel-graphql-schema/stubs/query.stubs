@@ -1,0 +1,49 @@
+<?php
+
+namespace $NAMESPACE$;
+
+use App\Models\$MODEL$;
+use Closure;
+use GraphQL\Type\Definition\ResolveInfo;
+use GraphQL\Type\Definition\Type;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Schema;
+use Rebing\GraphQL\Support\Facades\GraphQL;
+use Rebing\GraphQL\Support\Query;
+
+class $MODEL$Query extends Query
+{
+
+    protected $attributes = [
+        'name' => '$TABLE$',
+    ];
+
+    public function type(): Type
+    {
+        return Type::nonNull(Type::listOf(Type::nonNull(GraphQL::type('$MODEL$'))));
+    }
+
+    public function args(): array
+    {
+        return $ARGS$;
+    }
+
+    public function resolve($root, array $args, $context, ResolveInfo $resolveInfo, Closure $getSelectFields): Collection|array
+    {
+        $conditions = [];
+
+        foreach ($args as $key => $value) {
+            if ($value && Schema::hasColumn('$TABLE$', $key)) {
+                $conditions = [
+                    $key => $value
+                ];
+            }
+        }
+
+        $queryBuilder = $MODEL$::query();
+        if (!empty($conditions)) {
+            $queryBuilder->where($conditions);
+        }
+        return $queryBuilder->get();
+    }
+}
