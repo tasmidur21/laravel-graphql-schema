@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c68281ae3c3ef556a90a054cf7f4e4cd",
+    "content-hash": "2db38e63a8197dc5faef39d5095f278f",
     "packages": [
         {
             "name": "brick/math",
@@ -183,6 +183,71 @@
                 }
             ],
             "time": "2023-12-11T17:09:12+00:00"
+        },
+        {
+            "name": "daftspunk/laravel-config-writer",
+            "version": "v1.2.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/daftspunk/laravel-config-writer.git",
+                "reference": "13f15f3fb60047edaef8e839588d95d52e1c8a66"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/daftspunk/laravel-config-writer/zipball/13f15f3fb60047edaef8e839588d95d52e1c8a66",
+                "reference": "13f15f3fb60047edaef8e839588d95d52e1c8a66",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/config": "5.*|6.*|7.*|8.*|9.*|10.*|11.*|12.*|13.*|14.*|15.*|16.*|17.*|18.*|19.*|20.*",
+                "php": ">=7.1.0"
+            },
+            "require-dev": {
+                "orchestra/testbench": "3.8",
+                "phpunit/phpunit": "^7.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "October\\Rain\\Config\\ServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "October\\Rain\\Config\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Alexey Bobkov",
+                    "email": "aleksey.bobkov@gmail.com"
+                },
+                {
+                    "name": "Samuel Georges",
+                    "email": "daftspunky@gmail.com"
+                }
+            ],
+            "description": "Laravel provider to be able to rewrite configuration",
+            "homepage": "http://octobercms.com",
+            "keywords": [
+                "config",
+                "laravel",
+                "october",
+                "october cms",
+                "provider",
+                "write"
+            ],
+            "support": {
+                "issues": "https://github.com/daftspunk/laravel-config-writer/issues",
+                "source": "https://github.com/daftspunk/laravel-config-writer/tree/v1.2.2"
+            },
+            "time": "2023-08-10T11:25:38+00:00"
         },
         {
             "name": "dflydev/dot-access-data",
@@ -6034,7 +6099,7 @@
         },
         {
             "name": "tasmidur/laravel-graphql-schema",
-            "version": "dev-main",
+            "version": "dev-master",
             "dist": {
                 "type": "path",
                 "url": "./packages/laravel-graphql-schema",

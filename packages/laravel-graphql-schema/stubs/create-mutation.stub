@@ -1,0 +1,43 @@
+<?php
+
+declare(strict_types=1);
+
+namespace $NAMESPACE$;
+
+use App\Models\$MODEL$;
+use Closure;
+use GraphQL\Type\Definition\ResolveInfo;
+use GraphQL\Type\Definition\Type;
+use Rebing\GraphQL\Support\Facades\GraphQL;
+use Rebing\GraphQL\Support\Mutation;
+
+class $MODEL$Create extends Mutation
+{
+    protected $attributes = [
+        'name' => '$TABLE$Create',
+        'description' => 'A mutation of $MODEL$'
+    ];
+
+    public function type(): Type
+    {
+        return GraphQL::type('$MODEL$');
+    }
+
+    public function args(): array
+    {
+        return $ARGS$;
+    }
+
+    protected function rules(array $args = []): array
+    {
+        return $VALIDATION_RULES$;
+    }
+
+    public function resolve($root, array $args, $context, ResolveInfo $resolveInfo, Closure $getSelectFields): $MODEL$
+    {
+        $instance = new $MODEL$();
+        $instance->fill($args);
+        $instance->save();
+        return $instance;
+    }
+}

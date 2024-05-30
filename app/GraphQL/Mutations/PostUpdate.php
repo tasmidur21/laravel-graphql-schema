@@ -1,25 +1,26 @@
 <?php
 
-namespace App\GraphQL\Queries;
+declare(strict_types=1);
+
+namespace App\GraphQL\Mutations;
 
 use App\Models\Post;
 use Closure;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
-use Illuminate\Support\Facades\Schema;
 use Rebing\GraphQL\Support\Facades\GraphQL;
-use Rebing\GraphQL\Support\Query;
+use Rebing\GraphQL\Support\Mutation;
 
-class PostQuery extends Query
+class PostUpdate extends Mutation
 {
-
     protected $attributes = [
-        'name' => 'posts',
+        'name' => 'postUpdate',
+        'description' => 'A mutation'
     ];
 
     public function type(): Type
     {
-        return Type::nonNull(Type::listOf(Type::nonNull(GraphQL::type('Post'))));
+        return GraphQL::type('Post');
     }
 
     public function args(): array
@@ -27,11 +28,11 @@ class PostQuery extends Query
         return [
             'id' => [
                 'name' => 'id',
-                'type' => Type::string(),
+                'type' => Type::int(),
             ],
             'user_id' => [
-                'name' => 'id',
-                'type' => Type::string(),
+                'name' => 'user_id',
+                'type' => Type::int(),
             ],
             'slug' => [
                 'name' => 'slug',
@@ -68,22 +69,26 @@ class PostQuery extends Query
         ];
     }
 
-    public function resolve($root, array $args, $context, ResolveInfo $resolveInfo, Closure $getSelectFields)
+    protected function rules(array $args = []): array
     {
-        $fields = $getSelectFields();
-        $whereConditions = [];
-        foreach ($args as $key => $value) {
-            if (Schema::hasColumn('posts', $key)) {
-                $whereConditions = [
-                    $key => $value
-                ];
-            }
-        }
-        $query = Post::query();
-        $query->select();
-        if (!empty($whereConditions)) {
-            $query->where($whereConditions);
-        }
-        return $query->get();
+        return [
+            'id' => ['required', 'integer'],
+            'user_id' => ['required', 'integer', 'min:0', 'max:18446744073709551615'],
+            'slug' => ['required', 'string', 'min:1', 'max:255'],
+            'category' => ['required', 'string', 'min:1', 'max:255'],
+            'tag' => ['nullable', 'string', 'min:1', 'max:255'],
+            'title' => ['required', 'string', 'min:1', 'max:255'],
+            'body' => ['required', 'string', 'min:1'],
+            'image' => ['nullable', 'string', 'min:1', 'max:255'],
+            'status' => ['required', 'integer', 'min:0', 'max:255']
+        ];
+    }
+
+    public function resolve($root, array $args, $context, ResolveInfo $resolveInfo, Closure $getSelectFields): Post
+    {
+        $post = Post::findOrFail($args['id']);
+        $post->fill($args);
+        $post->save();
+        return $post;
     }
 }

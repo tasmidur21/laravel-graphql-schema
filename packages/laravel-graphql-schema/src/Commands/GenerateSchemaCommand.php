@@ -2,253 +2,88 @@
 
 namespace Tasmidur\LaravelGraphqlSchema\Commands;
 
-use Brick\VarExporter\VarExporter;
-use Exception;
 use Illuminate\Console\Command;
-use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Filesystem\Filesystem;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Pluralizer;
-use Illuminate\Support\Str;
 use Symfony\Component\Console\Command\Command as CommandAlias;
 use Tasmidur\LaravelGraphqlSchema\Contracts\SchemaRulesResolverInterface;
-use Tasmidur\LaravelGraphqlSchema\Exceptions\ColumnDoesNotExistException;
-use Tasmidur\LaravelGraphqlSchema\Exceptions\FailedToCreateRequestClassException;
-use Tasmidur\LaravelGraphqlSchema\Exceptions\MultipleTablesSuppliedException;
-use Tasmidur\LaravelGraphqlSchema\Exceptions\TableDoesNotExistException;
+use Tasmidur\LaravelGraphqlSchema\Services\FileGeneratorService;
+use Tasmidur\LaravelGraphqlSchema\Services\GraphQLTypeParser;
+use Tasmidur\LaravelGraphqlSchema\Services\SchemaValidator;
+use Tasmidur\LaravelGraphqlSchema\Helpers\GraphQLHelper;
 
 class GenerateSchemaCommand extends Command
 {
     protected $signature = 'make:graphql:schema-rules {table : The table of which you want to generate the rules}
                {--columns= : Only create rules for specific columns of the table}
-               {--cf|create-file : Instead of outputting the schema rules, create graphQl Type,Query,Mutation class}
+               {--cf|create-file : Instead of outputting the schema rules, create GraphQL Type, Query, Mutation class}
                {--f|force : If "create" was given, then the request class gets created even if it already exists}';
 
     protected $description = 'Generate validation rules based on your database table schema';
 
     protected Filesystem $filesystem;
-    protected string $facadeClone = "FACADE_DOUBLE_CLONE";
 
-    /**
-     * Create a new command instance.
-     * @param Filesystem $files
-     */
     public function __construct(Filesystem $filesystem)
     {
         parent::__construct();
-
         $this->filesystem = $filesystem;
     }
 
-
-    /**
-     * @throws BindingResolutionException
-     * @throws MultipleTablesSuppliedException
-     * @throws TableDoesNotExistException
-     * @throws ColumnDoesNotExistException
-     * @throws FailedToCreateRequestClassException
-     */
     public function handle(): int
     {
-        // Arguments
-        $table = (string)$this->argument('table');
+        try {
+            $table = (string)$this->argument('table');
+            $columns = $this->parseColumns($this->option('columns'));
+            $createFile = (bool)$this->option('create-file');
+            $force = (bool)$this->option('force');
 
-        // Options
-        $columns = (array)array_filter(explode(',', $this->option('columns')));
-        $createFile = (bool)$this->option('create-file');
-        $force = (bool)$this->option('force');
+            $schemaValidator = new SchemaValidator();
+            $schemaValidator->checkTableAndColumns($table, $columns);
 
+            $rules = $this->generateSchemaRules($table, $columns);
 
-        $this->checkTableAndColumns($table, $columns);
-        /**
-         * [
-         * $fields,
-         * $args,
-         * $validationRules
-         * ]=$rules;
-         */
-        $rules = app()->make(SchemaRulesResolverInterface::class, [
+            $graphQLTypeParser = new GraphQLTypeParser();
+            $parsedRules = $graphQLTypeParser->parsedToGraphQLType($table, $rules);
+
+            if ($createFile) {
+                $fileGenerator = new FileGeneratorService($this->filesystem);
+                $fileGenerator->createRequest($table, $parsedRules, $force);
+            } else {
+                $this->createOutput($table, $parsedRules);
+            }
+
+            return CommandAlias::SUCCESS;
+        } catch (\Exception $e) {
+            $this->error($e->getMessage());
+            return CommandAlias::FAILURE;
+        }
+    }
+
+    private function parseColumns(?string $columnsOption): array
+    {
+        return $columnsOption ? array_filter(explode(',', $columnsOption)) : [];
+    }
+
+    private function generateSchemaRules(string $table, array $columns)
+    {
+        return app()->make(SchemaRulesResolverInterface::class, [
             'table' => $table,
             'columns' => $columns,
         ])->generate();
-
-        $rules = $this->parsedToGraphQLType($table, $rules);
-        if ($createFile) {
-            $this->createRequest($table, $rules, $force);
-        } else {
-            $this->createOutput($table, $rules);
-        }
-
-        return CommandAlias::SUCCESS;
-    }
-
-    private function format($rules): string
-    {
-        return VarExporter::export($rules, VarExporter::INLINE_SCALAR_LIST);
-    }
-
-    /**
-     * @throws MultipleTablesSuppliedException
-     * @throws ColumnDoesNotExistException
-     * @throws TableDoesNotExistException
-     */
-    private function checkTableAndColumns(string $table, array $columns = []): void
-    {
-        if (count($tables = array_filter(explode(',', $table))) > 1) {
-            $msg = 'The command can only handle one table at a time - you gave: ' . implode(', ', $tables);
-
-            throw new MultipleTablesSuppliedException($msg);
-        }
-
-        if (!Schema::hasTable($table)) {
-            throw new TableDoesNotExistException("Table '$table' not found!");
-        }
-
-        if (empty($columns)) {
-            return;
-        }
-
-        $missingColumns = [];
-        foreach ($columns as $column) {
-            if (!Schema::hasColumn($table, $column)) {
-                $missingColumns[] = $column;
-            }
-        }
-
-        if (!empty($missingColumns)) {
-            $msg = "The following columns do not exists on the table '$table': " . implode(', ', $missingColumns);
-            throw new ColumnDoesNotExistException($msg);
-        }
     }
 
     private function createOutput(string $table, array $rules): void
     {
         if (app()->runningInConsole()) {
-            $this->info("GraphQL Schema type for table \"$table\" have been generated!");
-            $this->info('Copy & paste these where ever your graphql type takes place:');
+            $this->info("GraphQL Schema type for table \"$table\" has been generated!");
+            $this->info('Copy & paste these wherever your GraphQL type is defined:');
         }
+
         [$fields, $args, $validationRules] = $rules;
-        $this->info('GraphQl Type Fields:');
-        $this->line($this->format($fields));
-        $this->info('GraphQl Validation Rules:');
-        $this->line($this->format($validationRules));
-        $this->info('GraphQl Query arguments:');
-        $this->line($this->format($args));
-
+        $this->info('GraphQL Type Fields:');
+        $this->line(GraphQLHelper::format($fields));
+        $this->info('GraphQL Validation Rules:');
+        $this->line(GraphQLHelper::format($validationRules));
+        $this->info('GraphQL Query Arguments:');
+        $this->line(GraphQLHelper::format($args));
     }
-
-    public function getSingularClassName($name): string
-    {
-        return ucwords(Pluralizer::singular($name));
-    }
-
-    public function getStubContents($stubVariables, string $stubFile): array|bool|string
-    {
-        $contents = file_get_contents(__DIR__ . "/../../stubs/$stubFile.stubs");
-
-        foreach ($stubVariables as $search => $replace) {
-            $contents = str_replace('$' . $search . '$', $replace, $contents);
-        }
-
-        return $contents;
-
-    }
-
-    private function parsedToGraphQLType(string $table, array $rules): array
-    {
-        $definition = [];
-        $definition["validation_rules"] = $rules;
-        foreach ($rules as $key => $rule) {
-            $isRequired = $rule[0] === 'required';
-            $attributeType = $rule[1] ?? null;
-
-            $definition["fields"][$key] = [
-                "type" => $this->getGraphQlType($attributeType, $isRequired),
-                "description" => "The $key of the $table"
-            ];
-            $definition["args"][] = [
-                "name" => $key,
-                "type" => $this->getGraphQlArgs($attributeType)
-            ];
-        }
-        return [
-            str_replace(['"#', '#"', '{', '}', ':', $this->facadeClone], ['', '', '[', ']', '=>', '::'], json_encode($definition['fields'], JSON_PRETTY_PRINT)),
-            str_replace(['"#', '#"', '{', '}', ':', $this->facadeClone], ['', '', '[', ']', '=>', '::'], json_encode($definition['args'], JSON_PRETTY_PRINT)),
-            $definition['validation_rules']
-        ];
-    }
-
-    /**
-     */
-    private function createRequest(string $table, array $rules, bool $force = false)
-    {
-        [$fields, $args, $validationRules] = $rules;
-        $namespacePrefix = config('graphql-schema-rules.namespace_prefix');
-        $fileDirectory = config('graphql-schema-rules.graphqL_base_dir');
-        $className = $this->getSingularClassName($table);
-        $typeClass = $fileDirectory . DIRECTORY_SEPARATOR . "Types" . DIRECTORY_SEPARATOR . $className . "Type.php";
-        $queryClass = $fileDirectory . DIRECTORY_SEPARATOR . "Queries" . DIRECTORY_SEPARATOR . $className . "Query.php";
-        $mutationCreateClass = $fileDirectory . DIRECTORY_SEPARATOR . "Mutations" . DIRECTORY_SEPARATOR . $className . "CreateMutation.php";
-        $mutationUpdateClass = $fileDirectory . DIRECTORY_SEPARATOR . "Mutations" . DIRECTORY_SEPARATOR . $className . "UpdateMutation.php";
-
-        $typeContent = $this->getStubContents([
-            "NAMESPACE" => $namespacePrefix . "\Types",
-            "MODEL" => $className,
-            "FIELDS" => $fields,
-        ], "type");
-
-        $queryContent = $this->getStubContents([
-            "NAMESPACE" => $namespacePrefix . "\Queries",
-            "MODEL" => $className,
-            "TABLE" => $table,
-            "ARGS" => $args,
-        ], "query");
-
-        $this->storeFile($typeClass, $typeContent, $force);
-        $this->storeFile($queryClass, $queryContent, $force);
-
-        //graphql schema file update;
-
-    }
-
-    public function storeFile(string $path, string $contents, bool $force = false): void
-    {
-        if (!$this->filesystem->isDirectory(dirname($path))) {
-            $this->filesystem->makeDirectory($path, 0777, true, true);
-        }
-
-        if (!$force && $this->filesystem->exists($path)) {
-            $this->info("Class : {$path} already exits");
-        } else {
-            $this->filesystem->put($path, $contents);
-            $this->info("Class : {$path} created");
-        }
-
-    }
-
-    private function getGraphQlType(mixed $attributeType, bool $isRequired): string
-    {
-
-        return match ($attributeType) {
-            "integer" => $isRequired ? "#Type" . $this->facadeClone . "nonNull(Type" . $this->facadeClone . "int())#" : "#Type" . $this->facadeClone . "int()#",
-            "numeric" => $isRequired ? "#Type" . $this->facadeClone . "nonNull(Type" . $this->facadeClone . "float())#" : "#Type" . $this->facadeClone . "float()#",
-            "boolean" => $isRequired ? "#Type" . $this->facadeClone . "nonNull(Type" . $this->facadeClone . "boolean())#" : "#Type" . $this->facadeClone . "boolean()#",
-            default => $isRequired ? "#Type" . $this->facadeClone . "nonNull(Type" . $this->facadeClone . "string())#" : "#Type" . $this->facadeClone . "string()#"
-        };
-    }
-
-    private function getGraphQlArgs(mixed $attributeType): string
-    {
-
-        return match ($attributeType) {
-            "integer" => "#Type" . $this->facadeClone . "int()#",
-            "numeric" => "#Type" . $this->facadeClone . "float()#",
-            "boolean" => "#Type" . $this->facadeClone . "boolean()#",
-            default => "#Type" . $this->facadeClone . "string()#"
-        };
-    }
-
-
 }

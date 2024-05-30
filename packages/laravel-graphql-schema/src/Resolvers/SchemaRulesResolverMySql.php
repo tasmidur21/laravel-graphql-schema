@@ -37,7 +37,7 @@ class SchemaRulesResolverMySql extends BaseSchemaRulesResolver implements Schema
         $databaseName = config('database.connections.mysql.database');
         $tableName = $this->table();
 
-        $tableColumns = collect(DB::select('SHOW COLUMNS FROM '.$tableName))->keyBy('Field')->toArray();
+        $tableColumns = collect(DB::select('SHOW COLUMNS FROM ' . $tableName))->keyBy('Field')->toArray();
 
         $foreignKeys = DB::select("
             SELECT k.COLUMN_NAME, k.REFERENCED_TABLE_NAME, k.REFERENCED_COLUMN_NAME
@@ -63,8 +63,8 @@ class SchemaRulesResolverMySql extends BaseSchemaRulesResolver implements Schema
         $columnRules = [];
         $columnRules[] = $column->Null === 'YES' ? 'nullable' : 'required';
 
-        if (! empty($column->Foreign)) {
-            $columnRules[] = 'exists:'.implode(',', $column->Foreign);
+        if (!empty($column->Foreign)) {
+            $columnRules[] = 'exists:' . implode(',', $column->Foreign);
 
             return $columnRules;
         }
@@ -77,13 +77,13 @@ class SchemaRulesResolverMySql extends BaseSchemaRulesResolver implements Schema
                 break;
             case $type->contains('char'):
                 $columnRules[] = 'string';
-                $columnRules[] = 'min:'.config('graphql-schema-rules.string_min_length');
-                $columnRules[] = 'max:'.filter_var($type, FILTER_SANITIZE_NUMBER_INT);
+                $columnRules[] = 'min:' . config('graphql-schema-rules.string_min_length');
+                $columnRules[] = 'max:' . filter_var($type, FILTER_SANITIZE_NUMBER_INT);
 
                 break;
             case $type == 'text':
                 $columnRules[] = 'string';
-                $columnRules[] = 'min:'.config('graphql-schema-rules.string_min_length');
+                $columnRules[] = 'min:' . config('graphql-schema-rules.string_min_length');
 
                 break;
             case $type->contains('int'):
@@ -94,18 +94,18 @@ class SchemaRulesResolverMySql extends BaseSchemaRulesResolver implements Schema
                 // prevent int(xx) for mysql
                 $intType = preg_replace("/\([^)]+\)/", '', $intType);
 
-                if (! array_key_exists($intType, self::$integerTypes)) {
+                if (!array_key_exists($intType, self::$integerTypes)) {
                     $intType = 'int';
                 }
 
-                $columnRules[] = 'min:'.self::$integerTypes[$intType][$sign][0];
-                $columnRules[] = 'max:'.self::$integerTypes[$intType][$sign][1];
+                $columnRules[] = 'min:' . self::$integerTypes[$intType][$sign][0];
+                $columnRules[] = 'max:' . self::$integerTypes[$intType][$sign][1];
 
                 break;
             case $type->contains('double') ||
-            $type->contains('decimal') ||
-            $type->contains('dec') ||
-            $type->contains('float'):
+                $type->contains('decimal') ||
+                $type->contains('dec') ||
+                $type->contains('float'):
                 // should we do more specific here?
                 // some kind of regex validation for double, double unsigned, double(8, 2), decimal etc...?
                 $columnRules[] = 'numeric';
@@ -114,7 +114,7 @@ class SchemaRulesResolverMySql extends BaseSchemaRulesResolver implements Schema
             case $type->contains('enum') || $type->contains('set'):
                 preg_match_all("/'([^']*)'/", $type, $matches);
                 $columnRules[] = 'string';
-                $columnRules[] = 'in:'.implode(',', $matches[1]);
+                $columnRules[] = 'in:' . implode(',', $matches[1]);
 
                 break;
             case $type->contains('year'):
